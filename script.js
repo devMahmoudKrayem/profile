@@ -1,91 +1,328 @@
-window.addEventListener('DOMContentLoaded', () => {
-  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  document.getElementById('year').textContent = new Date().getFullYear();
+(() => {
+  'use strict';
 
-  const menu = document.querySelector('.menu-button');
-  const nav = document.querySelector('.site-header nav');
-  menu?.addEventListener('click', () => { const open = menu.getAttribute('aria-expanded') === 'true'; menu.setAttribute('aria-expanded', String(!open)); nav.style.display = open ? '' : 'flex'; });
+  const root = document.documentElement;
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const selectAll = (selector, scope = document) => [...scope.querySelectorAll(selector)];
+  const translate = key => window.PortfolioI18n?.t(key) || key;
 
-  if (!reduced && window.Lenis) {
-    const lenis = new Lenis({ lerp: .09, smoothWheel: true });
-    lenis.on('scroll', ScrollTrigger.update);
-    gsap.ticker.add(t => lenis.raf(t * 1000)); gsap.ticker.lagSmoothing(0);
-  }
-
-  if (!reduced && window.gsap) {
-    gsap.registerPlugin(ScrollTrigger);
-    gsap.from('.site-header', { y: -30, opacity: 0, duration: .8, ease: 'power3.out' });
-    gsap.from('.hero .reveal', { y: 35, opacity: 0, duration: 1, stagger: .13, delay: .2, ease: 'power3.out' });
-    gsap.utils.toArray('.section-heading, .statement, .intro-details, .service-grid, .projects, .skill-groups, .principle-list, .workflow-layout ol, .testimonial-track').forEach(el => {
-      gsap.from(el, { y: 35, opacity: 0, duration: .85, ease: 'power3.out', scrollTrigger: { trigger: el, start: 'top 86%', once: true } });
-    });
-    gsap.utils.toArray('.journey-list article, .skill-groups article, .principle-list article, .workflow-layout li').forEach((el, i) => {
-      gsap.from(el, { x: -18, opacity: 0, duration: .55, delay: i * .06, scrollTrigger: { trigger: el.parentElement, start: 'top 82%', once: true } });
-    });
-    gsap.to('.hero-visual', { y: -24, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: 1.2 } });
-  }
-
-  if (!reduced && window.VanillaTilt) VanillaTilt.init(document.querySelectorAll('[data-tilt]'), { max: 4, speed: 600, glare: true, 'max-glare': .12 });
-  document.querySelectorAll('.magnetic').forEach(button => {
-    button.addEventListener('mousemove', e => { if (reduced) return; const r = button.getBoundingClientRect(); button.style.transform = `translate(${(e.clientX-r.left-r.width/2)*.12}px, ${(e.clientY-r.top-r.height/2)*.18}px)`; });
-    button.addEventListener('mouseleave', () => button.style.transform = 'translate(0,0)');
+  document.addEventListener('DOMContentLoaded', () => {
+    setCurrentYear();
+    initTheme();
+    initHeader();
+    initMobileMenu();
+    initActiveNavigation();
+    initSkillBrowser();
+    initReveals();
+    initCopyEmail();
+    initPortraitFallback();
+    initReadingProgress();
+    initCaseNavigation();
+    initVisibilityState();
   });
-  const glow = document.getElementById('cursor-glow');
-  window.addEventListener('pointermove', e => { glow.style.opacity = 1; glow.style.left = e.clientX+'px'; glow.style.top = e.clientY+'px'; }, { passive: true });
 
-  if (!reduced && window.THREE) {
-    const canvas = document.getElementById('hero-canvas'); const scene = new THREE.Scene(); const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, .1, 100); camera.position.z = 5;
-    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true }); renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5)); renderer.setSize(innerWidth, innerHeight);
-    const geo = new THREE.BufferGeometry(), count = 160, positions = new Float32Array(count * 3); for (let i=0;i<count*3;i++) positions[i]=(Math.random()-.5)*11; geo.setAttribute('position', new THREE.BufferAttribute(positions,3));
-    const points = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xc5f36a, size: .028, transparent: true, opacity: .7 })); scene.add(points);
-    const wire = new THREE.Mesh(new THREE.IcosahedronGeometry(1.45, 2), new THREE.MeshBasicMaterial({ color: 0x8ed6b6, wireframe: true, transparent: true, opacity: .12 })); wire.position.set(1.9,.1,-1); scene.add(wire);
-    const loop = () => { wire.rotation.x += .0014; wire.rotation.y += .002; points.rotation.y -= .00045; renderer.render(scene,camera); requestAnimationFrame(loop); }; loop();
-    addEventListener('resize', () => { camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); });
-  }
-});
-
-window.addEventListener('DOMContentLoaded', () => {
-  const toggle = document.querySelector('.theme-toggle');
-  const setTheme = theme => { document.body.dataset.theme = theme; const light = theme === 'light'; toggle?.setAttribute('aria-pressed', String(light)); toggle?.setAttribute('aria-label', `Switch to ${light ? 'dark' : 'light'} mode`); if (toggle) toggle.querySelector('b').textContent = light ? 'Dark' : 'Light'; if (toggle) toggle.querySelector('span').textContent = light ? '☾' : '☼'; };
-  setTheme(localStorage.getItem('portfolio-theme') || 'dark');
-  toggle?.addEventListener('click', () => { const next = document.body.dataset.theme === 'dark' ? 'light' : 'dark'; setTheme(next); localStorage.setItem('portfolio-theme', next); });
-
-});
-
-window.addEventListener('DOMContentLoaded', () => {
-  const groups = [
-    ['mobile','✦','Mobile Development',[['Flutter','Cross-platform apps with expressive, responsive UI.'],['Dart','Clear, productive application code.'],['Android','Native Android platform fundamentals.'],['Java','Reliable Android applications and APIs.'],['Kotlin','Modern, concise Android development.'],['Jetpack Compose','Declarative Android interfaces.']]],
-    ['state','◌','State Management',[['GetX','Reactive state and navigation for Flutter.'],['Provider','Lightweight dependency and state management.'],['Shared Preferences','Persistent local user preferences.']]],
-    ['backend','↗','Backend & APIs',[['Laravel','Structured server-side administration.'],['REST APIs','Thoughtful JSON service integrations.'],['Retrofit','Type-safe Android networking.'],['Postman','Confident API testing and validation.'],['Firebase Admin SDK','Trusted server-side Firebase operations.']]],
-    ['database','◫','Databases & Cloud',[['Firestore','Real-time cloud application data.'],['Firebase Authentication','Secure, low-friction identity flows.'],['SQLite','Reliable on-device persistence.'],['Room Database','Structured local Android data.'],['Cloudinary','Optimized image upload and delivery.']]],
-    ['engineering','⌘','Software Engineering',[['Clean Architecture','Clear layers built for long-term change.'],['MVVM','Predictable UI state and presentation logic.'],['MVC','Focused separation of concerns.'],['Repository Pattern','A stable boundary around data access.'],['System Analysis','Requirements translated into useful systems.'],['Database Design','Data models grounded in user actions.'],['Software Architecture','Scalable decisions from the start.']]],
-    ['design','△','UI / UX Design',[['Figma','High-fidelity product design and collaboration.'],['Wireframing','Fast exploration of ideas and structure.'],['User Flow','Intentional journeys with less friction.'],['Interactive Prototype','Experiences stakeholders can understand.'],['Design Systems','Reusable visual consistency at scale.'],['AI-assisted Design','Accelerated exploration with human judgement.']]],
-    ['tools','⚡','Development Tools',[['Git','Intentional version control workflows.'],['GitHub','Collaboration, reviews and delivery.'],['Android Studio','Native Android tooling and debugging.'],['VS Code','Fast, focused daily development.'],['Firebase Console','Cloud configuration and monitoring.']]]
-  ];
-  const grid = document.getElementById('skill-grid');
-  if (!grid) return;
-  grid.innerHTML = groups.map(([category,icon,title,skills]) => `<section class="skill-category" data-category="${category}"><header><i>${icon}</i><div><span>${category}</span><h3>${title}</h3></div></header><div class="category-card-grid">${skills.map(([name,description]) => `<article data-category="${category}"><i>${icon}</i><h3>${name}</h3><p>${description}</p><b>Explore <span>↗</span></b></article>`).join('')}</div></section>`).join('');
-  const skillLogos = {'Flutter':'flutter/flutter-original.svg','Dart':'dart/dart-original.svg','Android':'android/android-original.svg','Java':'java/java-original.svg','Kotlin':'kotlin/kotlin-original.svg','Jetpack Compose':'android/android-original.svg','GetX':'flutter/flutter-original.svg','Provider':'flutter/flutter-original.svg','Shared Preferences':'android/android-original.svg','Laravel':'laravel/laravel-original.svg','REST APIs':'fastapi/fastapi-original.svg','Retrofit':'android/android-original.svg','Postman':'postman/postman-original.svg','Firebase Admin SDK':'firebase/firebase-original.svg','Firestore':'firebase/firebase-original.svg','Firebase Authentication':'firebase/firebase-original.svg','SQLite':'sqlite/sqlite-original.svg','Room Database':'android/android-original.svg','Cloudinary':'cloudinary/cloudinary-original.svg','Clean Architecture':'android/android-original.svg','MVVM':'android/android-original.svg','MVC':'android/android-original.svg','Repository Pattern':'git/git-original.svg','System Analysis':'jira/jira-original.svg','Database Design':'mysql/mysql-original.svg','Software Architecture':'docker/docker-original.svg','Figma':'figma/figma-original.svg','Wireframing':'figma/figma-original.svg','User Flow':'figma/figma-original.svg','Interactive Prototype':'figma/figma-original.svg','Design Systems':'figma/figma-original.svg','AI-assisted Design':'figma/figma-original.svg','Git':'git/git-original.svg','GitHub':'github/github-original.svg','Android Studio':'androidstudio/androidstudio-original.svg','VS Code':'vscode/vscode-original.svg','Firebase Console':'firebase/firebase-original.svg'};
-  document.querySelectorAll('.category-card-grid article').forEach(card => { const name=card.querySelector('h3')?.textContent.trim(), mark=card.querySelector('i'), src=skillLogos[name]; if (!mark) return; if (src) { mark.innerHTML=`<img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/${src}" alt="${name} logo" loading="lazy">`; mark.className='brand-skill-logo'; } else { mark.textContent=name?.length<=5?name:'⌘'; mark.className='concept-skill-logo'; mark.setAttribute('aria-label',`${name} technical concept`); } });
-  const search = document.getElementById('skill-search'), tabs = [...document.querySelectorAll('.skill-tabs button')]; let active = 'all';
-  const update = () => { const term=(search?.value||'').toLowerCase(); document.querySelectorAll('.skill-category').forEach(group => { const matchCategory=active==='all'||group.dataset.category===active; let visible=0; group.querySelectorAll('article').forEach(card=>{const match=matchCategory&&card.textContent.toLowerCase().includes(term);card.classList.toggle('hidden',!match);if(match)visible++;});group.classList.toggle('hidden',!visible); }); };
-  tabs.forEach(tab=>tab.addEventListener('click',()=>{active=tab.dataset.filter;tabs.forEach(t=>t.classList.toggle('active',t===tab));update();})); search?.addEventListener('input',update);
-  if (window.gsap && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) gsap.from('.skill-category', {opacity:0,y:24,duration:.65,stagger:.08,ease:'power3.out',scrollTrigger:{trigger:'#skill-grid',start:'top 82%',once:true}});
-});
-
-window.addEventListener('DOMContentLoaded', () => {
-  const search = document.getElementById('skill-search');
-  const tabs = [...document.querySelectorAll('.skill-tabs button')];
-  const cards = [...document.querySelectorAll('.skill-card-grid article')];
-  let category = 'all';
-  const filterSkills = () => {
-    const query = (search?.value || '').toLowerCase();
-    cards.forEach(card => {
-      const matchesCategory = category === 'all' || card.dataset.category === category;
-      const matchesQuery = card.textContent.toLowerCase().includes(query);
-      card.classList.toggle('hidden', !matchesCategory || !matchesQuery);
+  function setCurrentYear() {
+    selectAll('[data-year]').forEach(element => {
+      element.textContent = String(new Date().getFullYear());
     });
-  };
-  tabs.forEach(tab => tab.addEventListener('click', () => { category = tab.dataset.filter; tabs.forEach(item => item.classList.toggle('active', item === tab)); filterSkills(); }));
-  search?.addEventListener('input', filterSkills);
-});
+  }
+
+  function initTheme() {
+    const toggles = selectAll('[data-theme-toggle]');
+    const themeColor = document.querySelector('meta[name="theme-color"]');
+    if (!toggles.length) return;
+
+    const sync = () => {
+      const dark = root.dataset.theme !== 'light';
+      const labelKey = dark ? 'switchLight' : 'switchDark';
+      const modeKey = dark ? 'lightMode' : 'darkMode';
+      toggles.forEach(toggle => {
+        toggle.setAttribute('aria-label', translate(labelKey));
+        toggle.setAttribute('aria-pressed', String(dark));
+      });
+      selectAll('[data-theme-label]').forEach(label => {
+        label.textContent = translate(modeKey);
+      });
+      if (themeColor) themeColor.content = dark ? '#090c11' : '#f2f0eb';
+    };
+
+    const setTheme = (theme, persist) => {
+      root.dataset.theme = theme === 'light' ? 'light' : 'dark';
+      if (persist) {
+        try { localStorage.setItem('portfolio-theme', root.dataset.theme); } catch { /* Preference remains session-only. */ }
+      }
+      sync();
+    };
+
+    toggles.forEach(toggle => {
+      toggle.addEventListener('click', () => {
+        setTheme(root.dataset.theme === 'dark' ? 'light' : 'dark', true);
+      });
+    });
+
+    document.addEventListener('portfolio:languagechange', sync);
+    sync();
+  }
+
+  function initHeader() {
+    const header = document.querySelector('[data-header]');
+    if (!header) return;
+
+    let scheduled = false;
+    const update = () => {
+      header.classList.toggle('is-scrolled', window.scrollY > 24);
+      scheduled = false;
+    };
+
+    window.addEventListener('scroll', () => {
+      if (scheduled) return;
+      scheduled = true;
+      requestAnimationFrame(update);
+    }, { passive: true });
+    update();
+  }
+
+  function initMobileMenu() {
+    const header = document.querySelector('[data-header]');
+    const button = document.querySelector('[data-menu-button]');
+    const menu = document.querySelector('[data-mobile-menu]');
+    if (!header || !button || !menu) return;
+
+    let returnFocus = null;
+    const menuLinks = () => selectAll('a, button:not([disabled])', menu).filter(element => element.offsetParent !== null);
+
+    const setOpen = open => {
+      button.setAttribute('aria-expanded', String(open));
+      button.setAttribute('aria-label', translate(open ? 'closeMenu' : 'openMenu'));
+      menu.setAttribute('aria-hidden', String(!open));
+      header.classList.toggle('menu-visible', open);
+      document.body.classList.toggle('menu-open', open);
+
+      if (open) {
+        returnFocus = document.activeElement;
+        requestAnimationFrame(() => menu.querySelector('nav a')?.focus());
+      } else if (returnFocus instanceof HTMLElement && document.contains(returnFocus)) {
+        returnFocus.focus();
+      }
+    };
+
+    button.addEventListener('click', () => setOpen(button.getAttribute('aria-expanded') !== 'true'));
+    menu.addEventListener('click', event => {
+      if (event.target.closest('a')) setOpen(false);
+    });
+
+    document.addEventListener('keydown', event => {
+      if (button.getAttribute('aria-expanded') !== 'true') return;
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setOpen(false);
+        return;
+      }
+      if (event.key !== 'Tab') return;
+
+      const focusable = [button, ...menuLinks()];
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    });
+
+    window.addEventListener('resize', () => {
+      if (window.innerWidth > 980 && button.getAttribute('aria-expanded') === 'true') setOpen(false);
+    }, { passive: true });
+
+    document.addEventListener('portfolio:languagechange', () => {
+      button.setAttribute('aria-label', translate(button.getAttribute('aria-expanded') === 'true' ? 'closeMenu' : 'openMenu'));
+    });
+  }
+
+  function initActiveNavigation() {
+    const links = selectAll('[data-nav-link]');
+    const sections = selectAll('[data-section]').filter(section => section.id);
+    if (!links.length || !sections.length || !('IntersectionObserver' in window)) return;
+
+    const byId = new Map(links.map(link => [link.getAttribute('href')?.slice(1), link]));
+    const observer = new IntersectionObserver(entries => {
+      const visible = entries
+        .filter(entry => entry.isIntersecting)
+        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+      if (!visible) return;
+      links.forEach(link => link.removeAttribute('aria-current'));
+      byId.get(visible.target.id)?.setAttribute('aria-current', 'true');
+    }, { rootMargin: '-30% 0px -58%', threshold: [0, .15, .4] });
+
+    sections.forEach(section => observer.observe(section));
+  }
+
+  function initSkillBrowser() {
+    const browser = document.querySelector('[data-skill-browser]');
+    if (!browser) return;
+
+    const buttons = selectAll('[data-skill-filter]', browser);
+    const cards = selectAll('[data-skill-category]', browser);
+    const intros = selectAll('[data-skill-intro]', browser);
+    const count = browser.querySelector('[data-skill-count]');
+
+    const activate = category => {
+      buttons.forEach(button => {
+        button.setAttribute('aria-pressed', String(button.dataset.skillFilter === category));
+      });
+      const visibleCards = cards.filter(card => card.dataset.skillCategory === category);
+      cards.forEach(card => {
+        card.hidden = card.dataset.skillCategory !== category;
+        card.classList.remove('is-entering');
+      });
+      visibleCards.forEach((card, cardIndex) => {
+        card.style.setProperty('--skill-order', String(cardIndex));
+      });
+      requestAnimationFrame(() => {
+        visibleCards.forEach(card => card.classList.add('is-entering'));
+      });
+      intros.forEach(intro => { intro.hidden = intro.dataset.skillIntro !== category; });
+      if (count) count.textContent = String(visibleCards.length).padStart(2, '0');
+      browser.dataset.activeCategory = category;
+    };
+
+    buttons.forEach((button, buttonIndex) => {
+      button.addEventListener('click', () => activate(button.dataset.skillFilter));
+      button.addEventListener('keydown', event => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+        event.preventDefault();
+        const direction = root.dir === 'rtl' ? -1 : 1;
+        let nextIndex = buttonIndex;
+        if (event.key === 'Home') nextIndex = 0;
+        if (event.key === 'End') nextIndex = buttons.length - 1;
+        if (event.key === 'ArrowRight') nextIndex = (buttonIndex + direction + buttons.length) % buttons.length;
+        if (event.key === 'ArrowLeft') nextIndex = (buttonIndex - direction + buttons.length) % buttons.length;
+        buttons[nextIndex].focus();
+        activate(buttons[nextIndex].dataset.skillFilter);
+      });
+    });
+
+    activate(buttons.find(button => button.getAttribute('aria-pressed') === 'true')?.dataset.skillFilter || 'mobile');
+  }
+
+  function initReveals() {
+    const heroItems = selectAll('.hero .reveal-item, .case-hero .reveal-item');
+    const revealItems = selectAll('[data-reveal]');
+
+    requestAnimationFrame(() => {
+      heroItems.forEach((item, index) => {
+        window.setTimeout(() => item.classList.add('is-visible'), reducedMotion.matches ? 0 : index * 70);
+      });
+    });
+
+    if (reducedMotion.matches || !('IntersectionObserver' in window)) {
+      revealItems.forEach(item => item.classList.add('is-visible'));
+      return;
+    }
+
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add('is-visible');
+        observer.unobserve(entry.target);
+      });
+    }, { rootMargin: '0px 0px -10%', threshold: .08 });
+
+    revealItems.forEach(item => observer.observe(item));
+  }
+
+  function initCopyEmail() {
+    const buttons = selectAll('[data-copy-email]');
+    const toast = document.querySelector('[data-toast]');
+    if (!buttons.length) return;
+    let toastTimer;
+
+    const showToast = message => {
+      if (!toast) return;
+      window.clearTimeout(toastTimer);
+      toast.textContent = message;
+      toast.classList.add('is-visible');
+      toastTimer = window.setTimeout(() => toast.classList.remove('is-visible'), 2600);
+    };
+
+    const copyFallback = value => {
+      const input = document.createElement('textarea');
+      input.value = value;
+      input.setAttribute('readonly', '');
+      input.style.position = 'fixed';
+      input.style.opacity = '0';
+      document.body.append(input);
+      input.select();
+      const copied = document.execCommand('copy');
+      input.remove();
+      return copied;
+    };
+
+    buttons.forEach(button => {
+      button.addEventListener('click', async () => {
+        const email = button.dataset.email;
+        if (!email) return;
+        let copied = false;
+        try {
+          if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(email);
+            copied = true;
+          } else {
+            copied = copyFallback(email);
+          }
+        } catch {
+          copied = copyFallback(email);
+        }
+        showToast(translate(copied ? 'emailCopied' : 'copyFailed'));
+      });
+    });
+  }
+
+  function initPortraitFallback() {
+    selectAll('[data-portrait]').forEach(image => {
+      image.addEventListener('error', () => {
+        image.closest('.portrait-stage')?.classList.add('image-error');
+      }, { once: true });
+    });
+  }
+
+  function initReadingProgress() {
+    const progress = document.querySelector('[data-reading-progress]');
+    if (!progress) return;
+
+    let scheduled = false;
+    const update = () => {
+      const max = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+      progress.style.setProperty('--progress', `${Math.min(100, Math.max(0, window.scrollY / max * 100))}%`);
+      progress.setAttribute('aria-valuenow', String(Math.round(window.scrollY / max * 100)));
+      scheduled = false;
+    };
+    window.addEventListener('scroll', () => {
+      if (scheduled) return;
+      scheduled = true;
+      requestAnimationFrame(update);
+    }, { passive: true });
+    update();
+  }
+
+  function initCaseNavigation() {
+    const navLinks = selectAll('[data-case-nav] a');
+    if (!navLinks.length || !('IntersectionObserver' in window)) return;
+    const targets = navLinks.map(link => document.querySelector(link.hash)).filter(Boolean);
+    const observer = new IntersectionObserver(entries => {
+      const visible = entries.filter(entry => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+      if (!visible) return;
+      navLinks.forEach(link => link.removeAttribute('aria-current'));
+      navLinks.find(link => link.hash === `#${visible.target.id}`)?.setAttribute('aria-current', 'true');
+    }, { rootMargin: '-25% 0px -60%', threshold: [0, .15] });
+    targets.forEach(target => observer.observe(target));
+  }
+
+  function initVisibilityState() {
+    document.addEventListener('visibilitychange', () => {
+      document.body.classList.toggle('document-hidden', document.hidden);
+    });
+  }
+})();

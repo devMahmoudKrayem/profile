@@ -1,30 +1,55 @@
 # Mahmoud Naser Abu Karim — Portfolio
 
-A production-ready static portfolio for a Mobile Software Engineer. Built with semantic HTML, CSS, and vanilla JavaScript; no build step is required.
+A production-ready bilingual portfolio for a Mobile Software Engineer. The site is built with semantic HTML, modern CSS, and vanilla JavaScript; there is no build step and no framework runtime.
 
 ## Run locally
 
-Open `index.html` in a browser, or serve the folder with any static-file server. External libraries (GSAP, ScrollTrigger, Lenis, Three.js and VanillaTilt) are loaded from stable CDNs.
+Serve the repository root so project links and metadata behave like they will in production:
+
+```powershell
+python -m http.server 8000
+```
+
+Then open `http://localhost:8000/`.
+
+## Structure
+
+- `index.html` — portfolio landing page
+- `styles.css` — shared design system, responsive layout, light/dark themes, and RTL rules
+- `i18n.js` — English/Arabic copy and preference handling
+- `script.js` — navigation, theme, accessibility, reveal, and progress interactions
+- `projects/project.js` — factual bilingual data and shared case-study renderer
+- `projects/project.css` — case-study system and project-specific art direction
+- `projects/*.html` — progressive entry pages for all seven case studies
+- `og-portfolio.png` — production social-preview artwork
+
+## Product behavior
+
+- English and Arabic are fully supported, including LTR/RTL layout and localized metadata.
+- Language and theme preferences are saved in `localStorage`; theme falls back to the visitor’s system preference.
+- The mobile navigation traps focus, closes with Escape, restores focus, and locks page scrolling while open.
+- Motion is lightweight and respects `prefers-reduced-motion`.
+- Skills are grouped into keyboard-accessible category toggles with technology-specific cards and icons.
+- Technology marks use the pinned Devicon 2.17.0 set; non-brand skill concepts use Google Material Icons, with the Cloudinary mark supplied by Simple Icons.
+- Project visuals are clearly labelled as interface concepts, not client screenshots.
 
 ## Deploy
 
-- **GitHub Pages:** publish this repository's root directory from the Pages settings.
-- **Vercel / Netlify:** import the repository as a static site; no build command or output directory is needed.
-- **Firebase Hosting:** run `firebase init hosting`, select this directory as the public directory, then run `firebase deploy`.
+This is a static site. No build command or output folder is required.
 
-## Personalize before launch
+- **GitHub Pages:** publish the repository root from **Settings → Pages**.
+- **Netlify:** import the repository, leave the build command empty, and publish the root directory (`.`).
+- **Vercel:** import the repository and choose **Other** as the framework preset with no build command.
+- **Firebase Hosting:** initialize Hosting, choose this repository as the public directory, and deploy.
 
-1. Replace the hero initials placeholder with an optimized profile photograph.
-2. Replace the screenshot placeholders in each `/projects/` case study with real product imagery.
-3. Update the GitHub Repository placeholder on each case study when repository links are ready.
+Before using a custom domain, update any relative social-image URLs to absolute production URLs and add the domain’s canonical links.
 
-## Case studies
+## Content still requiring real assets
 
-The seven project pages live in `projects/`. They share a maintainable content source (`projects/project.js`) and include the requested overview, problem, solution, features, architecture, database, integrations, gallery placeholders, lessons and future improvements.
+The current site deliberately avoids fabricated product evidence. Add these only when they are available:
 
-## 4D internal review
+1. Real product screenshots or approved store imagery for individual case studies.
+2. Public repository, live demo, or store links for projects that can be shared.
+3. Verified performance or usage outcomes, if documented later.
 
-- **Deconstruct:** structured the experience around credibility, product range, technical depth and an obvious contact path.
-- **Diagnose:** avoided generic skill grids and visual clutter; the work is presented as product stories with clear technical context.
-- **Develop:** included responsive layouts, keyboard skip navigation, semantic landmarks, reduced-motion support, lightweight CSS visuals, lazy external scripts, and SEO metadata.
-- **Decide:** kept a dark technical editorial visual language with an intentional, image-free project-art direction until real product screenshots are available.
+Until then, repository status is shown honestly as **Private / link unavailable**, and the custom interface artwork remains labelled as conceptual.
